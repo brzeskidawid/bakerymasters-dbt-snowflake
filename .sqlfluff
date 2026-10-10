@@ -1,0 +1,37 @@
+[sqlfluff]
+dialect = snowflake
+templater = jinja
+max_line_length = 120
+exclude_rules = ST06, RF01, RF02, RF03, RF04, AM05, ST07, CV02, LT05
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indented_joins = false
+indented_ctes = false
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+# Jedyne wlasne makro projektu - sqlfluff musi je znac, zeby sparsowac SQL.
+# Wbudowane makra dbt (ref, source, config, is_incremental, this) sqlfluff
+# podstawia sam przez apply_dbt_builtins.
+[sqlfluff:templater:jinja:macros]
+na_pelny_etat = {% macro na_pelny_etat(kwota, etat) %}round({{ kwota }} / nullif({{ etat }}, 0), 2){% endmacro %}
+
+# Dopuszczamy wyrownanie aliasow w kolumnie - czytelniejsze przy szerokich selectach.
+[sqlfluff:layout:type:alias_expression]
+spacing_before = align
+align_within = select_clause
+align_scope = bracketed
