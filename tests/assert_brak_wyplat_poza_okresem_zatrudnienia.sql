@@ -5,7 +5,7 @@
 select
     f.lista_plac_id,
     f.pracownik_id,
-    f.rok_miesiac,
+    f.data_miesiaca,
     p.data_zatrudnienia,
     p.data_zwolnienia
 from {{ ref('fct_lista_plac') }} as f
