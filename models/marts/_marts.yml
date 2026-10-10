@@ -1,0 +1,101 @@
+version: 2
+
+models:
+  - name: dim_stanowisko
+    description: >
+      Wymiar stanowiska: atrybuty organizacyjne, poziom siatki, kategoria porownawcza
+      oraz wynik wartosciowania pracy (ze zrodla i przeliczony z mostka).
+      Wymiar konformowany - laczy sie zarowno z fct_lista_plac, jak i agg_luka_placowa.
+    columns:
+      - name: stanowisko_id
+        description: "Klucz glowny wymiaru."
+        tests: [unique, not_null]
+      - name: stanowisko
+        tests: [not_null]
+      - name: poziom_nr
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 7
+      - name: punkty_laczne
+        description: "Wartosciowanie przeliczone z mostka: suma (ocena x waga podkryterium)."
+        tests: [not_null]
+
+  - name: dim_pracownik
+    description: "Wymiar pracownika. Ziarno: 1 wiersz = pracownik (stan biezacy)."
+    columns:
+      - name: pracownik_id
+        tests: [unique, not_null]
+      - name: plec
+        tests:
+          - accepted_values:
+              values: ['K', 'M']
+      - name: czy_aktywny
+        tests: [not_null]
+      - name: stanowisko_id
+        tests:
+          - relationships:
+              to: ref('dim_stanowisko')
+              field: stanowisko_id
+
+  - name: dim_miesiac
+    description: "Wymiar czasu na poziomie miesiaca, wygenerowany z zakresu listy plac."
+    columns:
+      - name: miesiac_key
+        tests: [unique, not_null]
+      - name: data_miesiaca
+        tests: [unique, not_null]
+
+  - name: fct_lista_plac
+    description: >
+      Tabela faktow listy plac. Ziarno: 1 wiersz = pracownik x miesiac.
+      Materializacja incremental (merge po lista_plac_id) - przy kolejnych
+      uruchomieniach doliczane sa wylacznie nowe miesiace.
+      Zawiera wylacznie miary addytywne.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [pracownik_id, miesiac_key]
+    columns:
+      - name: lista_plac_id
+        tests: [unique, not_null]
+      - name: pracownik_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_pracownik')
+              field: pracownik_id
+      - name: stanowisko_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_stanowisko')
+              field: stanowisko_id
+      - name: miesiac_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_miesiac')
+              field: miesiac_key
+      - name: wynagrodzenie_calkowite
+        description: "Miara addytywna: sumuje sie poprawnie po kazdym wymiarze."
+        tests: [not_null]
+      - name: wynagrodzenie_fte
+        description: >
+          Wynagrodzenie sprowadzone do pelnego etatu. Addytywne tylko jako skladnik
+          sredniej - w raporcie dzielone przez liczbe pracownikow w DAX.
+
+  - name: agg_luka_placowa
+    description: >
+      Agregat pomocniczy do analizy luki placowej. Ziarno: miesiac x stanowisko x plec.
+      Celowo zawiera tylko sumy i licznosci - sama luka (iloraz) liczona jest w DAX,
+      bo jej wartosc zalezy od wybranego przekroju.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [miesiac_key, stanowisko_id, plec]
+    columns:
+      - name: liczba_pracownikow
+        tests: [not_null]
+      - name: plec
+        tests:
+          - accepted_values:
+              values: ['K', 'M']

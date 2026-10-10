@@ -1,0 +1,47 @@
+# Profil uzywany wylacznie przez GitHub Actions.
+# Zadnych hasel w repo - wszystko z sekretow, przez env_var().
+# Lokalnie uzywasz ~/.dbt/profiles.yml (patrz README).
+
+default:
+
+  target: ci
+
+  outputs:
+
+    # Pelny build na Snowflake - uruchamiany po mergu do main.
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema: ANALYTICS
+      threads: 8
+      client_session_keep_alive: false
+
+    # Build na pull requescie - do tymczasowego schematu PR_<numer>,
+    # kasowanego po zamknieciu PR-a.
+    ci:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema: "{{ env_var('DBT_CI_SCHEMA', 'PR_LOCAL') }}"
+      threads: 8
+
+    # Profil bez polaczenia - tylko do `dbt parse` w CI.
+    parse_only:
+      type: snowflake
+      account: parse-only
+      user: parse-only
+      password: parse-only
+      role: ACCOUNTADMIN
+      database: BAKERY
+      warehouse: DBT_WH
+      schema: ANALYTICS
+      threads: 4

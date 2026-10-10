@@ -1,0 +1,105 @@
+version: 2
+
+models:
+  - name: stg_pracownicy
+    description: "Pracownicy po standaryzacji nazw i typow. Ziarno: 1 wiersz = pracownik."
+    columns:
+      - name: pracownik_id
+        tests: [unique, not_null]
+      - name: plec
+        tests:
+          - accepted_values:
+              values: ['K', 'M']
+      - name: typ_umowy
+        tests:
+          - accepted_values:
+              values: ['UoP', 'B2B', 'Zlecenie']
+      - name: stanowisko_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_wartosciowanie')
+              field: stanowisko_id
+      - name: dzial_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_struktura_org')
+              field: dzial_id
+      - name: kod_siatki
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_siatka')
+              field: kod_siatki
+
+  - name: stg_lista_plac
+    description: "Lista plac po standaryzacji. Ziarno: 1 wiersz = pracownik x miesiac."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [pracownik_id, rok_miesiac]
+    columns:
+      - name: lista_plac_id
+        tests: [unique, not_null]
+      - name: pracownik_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_pracownicy')
+              field: pracownik_id
+      - name: wynagrodzenie_calkowite
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false
+
+  - name: stg_wartosciowanie
+    description: "Stanowiska z wynikiem wartosciowania pracy."
+    columns:
+      - name: stanowisko_id
+        tests: [unique, not_null]
+      - name: kategoria_porownawcza
+        tests:
+          - relationships:
+              to: ref('stg_kategorie_porownawcze')
+              field: kategoria_porownawcza
+
+  - name: stg_bridge_wartosciowanie
+    description: "Mostek stanowisko x podkryterium."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [stanowisko_id, podkryterium]
+    columns:
+      - name: ocena
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 5
+              inclusive: true
+      - name: podkryterium
+        tests:
+          - relationships:
+              to: ref('stg_kryteria')
+              field: podkryterium
+
+  - name: stg_kryteria
+    description: "Metodyka wartosciowania - wagi kryteriow i podkryteriow."
+    columns:
+      - name: podkryterium_id
+        tests: [unique, not_null]
+
+  - name: stg_siatka
+    columns:
+      - name: kod_siatki
+        tests: [unique, not_null]
+
+  - name: stg_struktura_org
+    columns:
+      - name: dzial_id
+        tests: [unique, not_null]
+
+  - name: stg_kategorie_porownawcze
+    columns:
+      - name: kategoria_porownawcza
+        tests: [unique, not_null]

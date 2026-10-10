@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: bakery_raw
+    database: BAKERY
+    schema: RAW
+    description: "Surowe pliki CSV z systemu kadrowo-placowego BakeryMasters, zaladowane bez transformacji."
+    tables:
+      - name: D_PRACOWNICY
+        description: "Slownik pracownikow. Ziarno: 1 wiersz = pracownik."
+        columns:
+          - name: ID_PRACOWNIKA
+            tests: [unique, not_null]
+      - name: F_LISTA_PLAC
+        description: "Lista plac. Ziarno: 1 wiersz = pracownik x miesiac."
+        columns:
+          - name: ID_LISTY
+            tests: [unique, not_null]
+          - name: ID_PRACOWNIKA
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bakery_raw', 'D_PRACOWNICY')
+                  field: ID_PRACOWNIKA
+      - name: D_STRUKTURA_ORG
+        description: "Slownik dzialow i pionow."
+        columns:
+          - name: ID_DZIALU
+            tests: [unique, not_null]
+      - name: D_SIATKA
+        description: "Poziomy siatki stanowisk S1-S7."
+        columns:
+          - name: KOD_SIATKI
+            tests: [unique, not_null]
+      - name: D_WARTOSCIOWANIE
+        description: "Wynik wartosciowania pracy na poziomie stanowiska."
+        columns:
+          - name: ID_STANOWISKA
+            tests: [unique, not_null]
+      - name: D_KRYTERIA_WARTOSCIOWANIA
+        description: "Metodyka wartosciowania: kryteria glowne, podkryteria i ich wagi."
+        columns:
+          - name: ID_PODKRYTERIUM
+            tests: [unique, not_null]
+          - name: PODKRYTERIUM
+            tests: [unique, not_null]
+      - name: D_KATEGORIE_POROWNAWCZE
+        description: "Kategorie porownawcze KP-1..KP-6."
+        columns:
+          - name: KATEGORIA_POROWNAWCZA
+            tests: [unique, not_null]
+      - name: BRIDGE_WARTOSCIOWANIE
+        description: "Tabela mostkowa. Ziarno: 1 wiersz = stanowisko x podkryterium, z ocena 1-5."
