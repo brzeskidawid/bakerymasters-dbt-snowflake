@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  DBT_PROFILES_DIR: ./ci
+  SNOWFLAKE_ACCOUNT:   ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER:      ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD:  ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE:      ${{ secrets.SNOWFLAKE_ROLE }}
+  SNOWFLAKE_DATABASE:  ${{ secrets.SNOWFLAKE_DATABASE }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+
+jobs:
+  build:
+    name: dbt build (produkcja)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install "dbt-snowflake~=1.12.0"
+      - run: dbt deps
+      - run: dbt build --target prod
+      - run: dbt docs generate --target prod
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prod-manifest
+          path: target/manifest.json
+          retention-days: 30
