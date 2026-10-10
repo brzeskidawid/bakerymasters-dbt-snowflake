@@ -21,12 +21,13 @@ select
     f.rok,
     f.stanowisko_id,
     p.plec,
-    count(distinct f.pracownik_id) as liczba_pracownikow,
-    sum(f.wynagrodzenie_fte)       as suma_wynagrodzen_fte,
-    sum(f.wynagrodzenie_calkowite) as suma_wynagrodzen,
-    sum(f.wynagrodzenie_zasadnicze) as suma_wynagrodzen_zasadniczych, -- dodane
-    sum(f.etat)                    as suma_etatow,
-    sum(f.godziny_nadliczbowe)     as suma_nadgodzin
+    count(distinct f.pracownik_id)  as liczba_pracownikow,
+    sum(f.wynagrodzenie_fte)        as suma_wynagrodzen_fte,
+    sum(f.wynagrodzenie_calkowite)  as suma_wynagrodzen,
+    sum(f.wynagrodzenie_zasadnicze) as suma_wynagrodzen_zasadniczych,
+    sum(f.premia)                   as suma_premii,
+    sum(f.etat)                     as suma_etatow,
+    sum(f.godziny_nadliczbowe)      as suma_nadgodzin
 from f
 inner join p on f.pracownik_id = p.pracownik_id
 group by 1, 2, 3, 4, 5
