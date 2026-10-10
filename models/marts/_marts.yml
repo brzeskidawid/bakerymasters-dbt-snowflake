@@ -6,6 +6,7 @@ models:
       Wymiar stanowiska: atrybuty organizacyjne, poziom siatki, kategoria porownawcza
       oraz wynik wartosciowania pracy (ze zrodla i przeliczony z mostka).
       Wymiar konformowany - laczy sie zarowno z fct_lista_plac, jak i agg_luka_placowa.
+      W Snowflake widoczny jako D_Stanowisko.
     columns:
       - name: stanowisko_id
         description: "Klucz glowny wymiaru."
@@ -22,7 +23,9 @@ models:
         tests: [not_null]
 
   - name: dim_pracownik
-    description: "Wymiar pracownika. Ziarno: 1 wiersz = pracownik (stan biezacy)."
+    description: >
+      Wymiar pracownika. Ziarno: 1 wiersz = pracownik (stan biezacy).
+      W Snowflake widoczny jako D_Pracownik.
     columns:
       - name: pracownik_id
         tests: [unique, not_null]
@@ -38,23 +41,36 @@ models:
               to: ref('dim_stanowisko')
               field: stanowisko_id
 
-  - name: dim_miesiac
-    description: "Wymiar czasu na poziomie miesiaca, wygenerowany z zakresu listy plac."
+  - name: dim_calendar
+    description: >
+      Kalendarz w ziarnie dnia, ciagly, obejmujacy pelne lata kalendarzowe.
+      Ciaglosc i pelne lata sa warunkiem oznaczenia tabeli jako tabeli dat
+      w Power BI i dzialania funkcji time intelligence.
+      W Snowflake widoczny jako D_Calendar.
     columns:
-      - name: miesiac_key
+      - name: data
+        description: "Klucz glowny wymiaru - jeden wiersz na dzien."
         tests: [unique, not_null]
-      - name: data_miesiaca
+      - name: data_key
         tests: [unique, not_null]
+      - name: rok
+        tests: [not_null]
+      - name: miesiac
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 12
 
   - name: fct_lista_plac
     description: >
       Tabela faktow listy plac. Ziarno: 1 wiersz = pracownik x miesiac.
-      Materializacja incremental (merge po lista_plac_id) - przy kolejnych
-      uruchomieniach doliczane sa wylacznie nowe miesiace.
-      Zawiera wylacznie miary addytywne.
+      Materializacja incremental (merge po lista_plac_id) z on_schema_change
+      ustawionym na sync_all_columns, zeby zmiana zestawu kolumn nie wymagala
+      pelnego przeladowania. Zawiera wylacznie klucze obce i miary addytywne.
+      W Snowflake widoczna jako F_Lista_Plac.
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [pracownik_id, miesiac_key]
+          combination_of_columns: [pracownik_id, data_miesiaca]
     columns:
       - name: lista_plac_id
         tests: [unique, not_null]
@@ -70,12 +86,13 @@ models:
           - relationships:
               to: ref('dim_stanowisko')
               field: stanowisko_id
-      - name: miesiac_key
+      - name: data_miesiaca
+        description: "Klucz obcy do D_Calendar - pierwszy dzien miesiaca rozliczeniowego."
         tests:
           - not_null
           - relationships:
-              to: ref('dim_miesiac')
-              field: miesiac_key
+              to: ref('dim_calendar')
+              field: data
       - name: wynagrodzenie_calkowite
         description: "Miara addytywna: sumuje sie poprawnie po kazdym wymiarze."
         tests: [not_null]
@@ -89,10 +106,22 @@ models:
       Agregat pomocniczy do analizy luki placowej. Ziarno: miesiac x stanowisko x plec.
       Celowo zawiera tylko sumy i licznosci - sama luka (iloraz) liczona jest w DAX,
       bo jej wartosc zalezy od wybranego przekroju.
+      W Snowflake widoczny jako F_Luka_Placowa.
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [miesiac_key, stanowisko_id, plec]
+          combination_of_columns: [data_miesiaca, stanowisko_id, plec]
     columns:
+      - name: data_miesiaca
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_calendar')
+              field: data
+      - name: stanowisko_id
+        tests:
+          - relationships:
+              to: ref('dim_stanowisko')
+              field: stanowisko_id
       - name: liczba_pracownikow
         tests: [not_null]
       - name: plec
