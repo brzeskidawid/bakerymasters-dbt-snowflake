@@ -16,9 +16,7 @@ p as (
 )
 
 select
-    f.miesiac_key,
-    f.rok_miesiac,
-    f.rok,
+    f.data_miesiaca,
     f.stanowisko_id,
     p.plec,
     count(distinct f.pracownik_id)  as liczba_pracownikow,
@@ -30,4 +28,4 @@ select
     sum(f.godziny_nadliczbowe)      as suma_nadgodzin
 from f
 inner join p on f.pracownik_id = p.pracownik_id
-group by 1, 2, 3, 4, 5
+group by 1, 2, 3
