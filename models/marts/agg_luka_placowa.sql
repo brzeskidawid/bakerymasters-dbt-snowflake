@@ -24,6 +24,7 @@ select
     count(distinct f.pracownik_id) as liczba_pracownikow,
     sum(f.wynagrodzenie_fte)       as suma_wynagrodzen_fte,
     sum(f.wynagrodzenie_calkowite) as suma_wynagrodzen,
+    sum(f.wynagrodzenie_zasadnicze) as suma_wynagrodzen_zasadniczych, -- dodane
     sum(f.etat)                    as suma_etatow,
     sum(f.godziny_nadliczbowe)     as suma_nadgodzin
 from f
